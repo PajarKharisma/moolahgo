@@ -65,13 +65,13 @@ class UpdateTransaction
 
             // This query will return data consisting of two columns, namely transaction_id and bank_in_id that match.
             $sql = "SELECT it.bank_in_id, rt.transaction_id
-                FROM `incoming_transaction` AS it, remit_transaction AS rt
-                WHERE it.bank_in_amount = rt.transaction_expected_amount
-                AND it.bank_in_currency = rt.transaction_expected_currency
-                AND it.bank_in_transaction_reference = rt.transaction_reference_number
-                AND rt.transaction_financial_status='unpaid'
-                AND rt.transaction_processing_status='pending'
-                AND it.bank_in_status='pending'";
+        FROM `incoming_transaction` AS it, remit_transaction AS rt
+        WHERE it.bank_in_amount = rt.transaction_expected_amount
+        AND it.bank_in_currency = rt.transaction_expected_currency
+        AND it.bank_in_transaction_reference = rt.transaction_reference_number
+        AND rt.transaction_financial_status='unpaid'
+        AND rt.transaction_processing_status='pending'
+        AND it.bank_in_status='pending'";
 
             $result = $this->conn->query($sql)->fetchAll();
 
@@ -83,12 +83,17 @@ class UpdateTransaction
                 $bankInIds = join(',', array_column($result, 'bank_in_id'));
 
                 // Updates financial_status and processing_status
-                $queryUpdate1 = "UPDATE remit_transaction SET transaction_financial_status='paid', transaction_processing_status='completed' WHERE transaction_id IN ($remitIds)";
+                $queryUpdate1 = "UPDATE remit_transaction 
+                        SET transaction_financial_status='paid',
+                        transaction_processing_status='completed' 
+                        WHERE transaction_id IN ($remitIds)";
                 $stmt = $this->conn->prepare($queryUpdate1);
                 $stmt->execute();
 
                 // Updates bank_in_status
-                $queryUpdate2 = "UPDATE incoming_transaction SET bank_in_status='matched' WHERE bank_in_id IN ($bankInIds)";
+                $queryUpdate2 = "UPDATE incoming_transaction
+                        SET bank_in_status='matched'
+                        WHERE bank_in_id IN ($bankInIds)";
                 $stmt = $this->conn->prepare($queryUpdate2);
                 $stmt->execute();
             }
