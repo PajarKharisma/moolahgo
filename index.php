@@ -22,6 +22,8 @@ class Connection
 class UpdateTransaction
 {
     private $conn;
+
+    // Dummy variable to save last data on db. In real case will be better using caching.
     private $savedRemitCount = 0;
     private $savedBankInCount = 0;
     private $savedLastRemitId = -1;
@@ -33,6 +35,7 @@ class UpdateTransaction
         $this->conn = $connection->mysqlConnection();
     }
 
+    // Dummy function to check is there any new data inserted to db.
     private function checkNewData()
     {
         $remitResult = $this->conn->query('SELECT transaction_id FROM remit_transaction ORDER BY transaction_id DESC')->fetchAll();
@@ -57,7 +60,10 @@ class UpdateTransaction
 
     public function updateData()
     {
+        // First, we will check if there is any new data in the database. If there is, then the update will be done
         if ($this->checkNewData()) {
+
+            // This query will return data consisting of two columns, namely transaction_id and bank_in_id that match.
             $sql = "SELECT it.bank_in_id, rt.transaction_id
                 FROM `incoming_transaction` AS it, remit_transaction AS rt
                 WHERE it.bank_in_amount = rt.transaction_expected_amount
@@ -70,13 +76,18 @@ class UpdateTransaction
             $result = $this->conn->query($sql)->fetchAll();
 
             if (count($result) > 0) {
+                // Script for taking only transaction_id column and joining it with comma
                 $remitIds = join(',', array_column($result, 'transaction_id'));
+
+                // Script for taking only bank_in_id column and joining it with comma
                 $bankInIds = join(',', array_column($result, 'bank_in_id'));
 
+                // Updates financial_status and processing_status
                 $queryUpdate1 = "UPDATE remit_transaction SET transaction_financial_status='paid', transaction_processing_status='completed' WHERE transaction_id IN ($remitIds)";
                 $stmt = $this->conn->prepare($queryUpdate1);
                 $stmt->execute();
 
+                // Updates bank_in_status
                 $queryUpdate2 = "UPDATE incoming_transaction SET bank_in_status='matched' WHERE bank_in_id IN ($bankInIds)";
                 $stmt = $this->conn->prepare($queryUpdate2);
                 $stmt->execute();
